@@ -8,6 +8,7 @@ plotly>=5.20.0
 
 # Notebook visualization
 matplotlib>=3.7.0
+scikit-learn>=1.4.0
 
 # HTTP (for requests in app if needed)
 requests>=2.31.0
