@@ -12,8 +12,8 @@ I run everything inside Ubuntu/WSL instead of Windows Python.
 
 ```bash
 cd /home/flyingc/TravelWatchAI
-python3 -m venv TravelWatchAI
-source TravelWatchAI/bin/activate
+python3 -m venv .venv-travelwatch
+source .venv-travelwatch/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
@@ -47,13 +47,13 @@ Current notebook implementation:
 Run the notebook in WSL:
 
 ```bash
-source TravelWatchAI/bin/activate
+source .venv-travelwatch/bin/activate
 jupyter lab
 ```
 
 ## Run the App in WSL
 ```bash
-source TravelWatchAI/bin/activate
+source .venv-travelwatch/bin/activate
 cd streamlit_app
 streamlit run app.py
 ```
