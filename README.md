@@ -24,6 +24,7 @@ pip install jupyterlab
 
 ## Our Training Workflow
 You may find a reference in `document_reference/PAML_Proposal.pdf` for more:
+Notebook path: `notebooks/travelwatchai.ipynb`
 
 1. Prepare data from `datasets/Clean_Dataset.csv`.
 2. Perform EDA and preprocessing:
@@ -37,12 +38,6 @@ You may find a reference in `document_reference/PAML_Proposal.pdf` for more:
 6. Select deployment models with a bias toward stable, efficient models:
    prefer Ridge when performance is close to Lasso, and prefer Logistic Regression when performance is close to KNN.
 
-Current notebook implementation:
-
-- Regression: Ridge Regression vs. Lasso Regression
-- Classification: Logistic Regression vs. KNN
-- Evaluation: RMSE, MAE, MSE, R², F1, AUC-ROC
-- Notebook path: `notebooks/travelwatchai.ipynb`
 
 Run the notebook in WSL:
 
