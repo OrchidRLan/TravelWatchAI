@@ -12,3 +12,8 @@ scikit-learn>=1.4.0
 
 # HTTP (for requests in app if needed)
 requests>=2.31.0
+
+# Kagglehub
+kagglehub>=1.0.0
+
+
