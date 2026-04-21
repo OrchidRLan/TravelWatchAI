@@ -24,8 +24,13 @@ html, body, [class*="css"] {
     background: #0a0a0f;
     border-right: 1px solid #1e1e2e;
 }
-[data-testid="stSidebar"] * { color: #1e3a8a !important; }
+[data-testid="stSidebar"] * { color: #e2e2e8 !important; }
 
+/* Override ONLY sidebar button text */
+[data-testid="stSidebar"] .stButton > button,
+[data-testid="stSidebar"] .stButton > button * {
+    color: #1e3a8a !important;
+}
 /* Main background */
 [data-testid="stAppViewContainer"] {
     background: #f7f7fb;
