@@ -26,11 +26,20 @@ html, body, [class*="css"] {
 }
 [data-testid="stSidebar"] * { color: #e2e2e8 !important; }
 
+/* Override ONLY sidebar button text */
+[data-testid="stSidebar"] .stButton > button,
+[data-testid="stSidebar"] .stButton > button * {
+    color: #1e3a8a !important;
+}
 /* Main background */
 [data-testid="stAppViewContainer"] {
     background: #f7f7fb;
 }
 
+/* Button text ONLY */
+.stButton > button {
+    color: #1e3a8a !important;
+}          
 /* Metric cards */
 .tw-card {
     background: #ffffff;
@@ -87,6 +96,7 @@ html, body, [class*="css"] {
     transition: box-shadow 0.2s;
 }
 .tw-route-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -172,4 +182,4 @@ elif page == "ML Insights":
 elif page == "Settings":
     settings.render()
 
-render()
+dashboard.render()
