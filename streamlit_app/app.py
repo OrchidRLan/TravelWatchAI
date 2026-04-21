@@ -140,7 +140,7 @@ if "email_notif" not in st.session_state:
 if "price_alert" not in st.session_state:
     st.session_state.price_alert = "On"
 if "user_email" not in st.session_state:
-    st.session_state.user_email = "lp346@cornell.edu"
+    st.session_state.user_email = "useremail@gmail.com"
 if "page" not in st.session_state:
     st.session_state.page = "Dashboard"
 
@@ -186,7 +186,7 @@ with st.sidebar:
                     display:flex; align-items:center; justify-content:center;
                     color:white; font-weight:700; font-size:13px;'>L</div>
         <div>
-            <div style='font-size:13px; font-weight:600; color:#111;'>Lena Park</div>
+            <div style='font-size:13px; font-weight:600; color:#111;'>User Name</div>
             <div style='font-size:11px; color:#9ca3af;'>{st.session_state.user_email}</div>
         </div>
     </div>
