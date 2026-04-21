@@ -16,6 +16,22 @@ html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif;
 }
 
+/* Inactive sidebar buttons */
+[data-testid="stSidebar"] .stButton > button,
+[data-testid="stSidebar"] .stButton > button p,
+[data-testid="stSidebar"] .stButton > button span,
+[data-testid="stSidebar"] .stButton > button div {
+    color: #1e3a8a !important;
+}
+
+/* Active sidebar button */
+[data-testid="stSidebar"] .stButton > button[kind="primary"],
+[data-testid="stSidebar"] .stButton > button[kind="primary"] p,
+[data-testid="stSidebar"] .stButton > button[kind="primary"] span,
+[data-testid="stSidebar"] .stButton > button[kind="primary"] div {
+    color: #ffffff !important;
+}
+
 /* Hide default Streamlit nav */
 [data-testid="stSidebarNav"] { display: none; }
 
@@ -31,6 +47,10 @@ html, body, [class*="css"] {
     background: #f7f7fb;
 }
 
+/* Button text ONLY */
+.stButton > button {
+    color: #1e3a8a !important;
+}          
 /* Metric cards */
 .tw-card {
     background: #ffffff;
@@ -87,6 +107,7 @@ html, body, [class*="css"] {
     transition: box-shadow 0.2s;
 }
 .tw-route-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -172,4 +193,4 @@ elif page == "ML Insights":
 elif page == "Settings":
     settings.render()
 
-render()
+dashboard.render()
