@@ -7,169 +7,206 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Global CSS ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
-}
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
-/* Hide default Streamlit nav */
+/* Hide default nav */
 [data-testid="stSidebarNav"] { display: none; }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background: #0a0a0f;
-    border-right: 1px solid #1e1e2e;
+    background: #ffffff;
+    border-right: 1px solid #f0f0f0;
+    padding-top: 0;
 }
-[data-testid="stSidebar"] * { color: #e2e2e8 !important; }
+[data-testid="stSidebar"] > div:first-child { padding: 0; }
+
+/* Remove default padding */
+.block-container { padding: 2rem 2.5rem 2rem 2.5rem !important; }
 
 /* Main background */
-[data-testid="stAppViewContainer"] {
-    background: #f7f7fb;
+[data-testid="stAppViewContainer"] { background: #f5f5f5; }
+[data-testid="stAppViewContainer"] > .main { background: #f5f5f5; }
+
+/* Main content white card */
+.main-content {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px 36px;
+    min-height: 90vh;
 }
 
-/* Metric cards */
+/* Cards */
 .tw-card {
     background: #ffffff;
-    border: 1px solid #e8e8f0;
-    border-radius: 14px;
-    padding: 20px 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-}
-.tw-card-dark {
-    background: #0a0a0f;
-    border: 1px solid #1e1e2e;
-    border-radius: 14px;
-    padding: 20px 24px;
-    color: #e2e2e8;
-}
-.tw-badge-buy {
-    background: #d4f7e7;
-    color: #0a6640;
-    border-radius: 999px;
-    padding: 4px 14px;
-    font-weight: 600;
-    font-size: 13px;
-    display: inline-block;
-}
-.tw-badge-wait {
-    background: #fde8d8;
-    color: #7a3010;
-    border-radius: 999px;
-    padding: 4px 14px;
-    font-weight: 600;
-    font-size: 13px;
-    display: inline-block;
-}
-.tw-page-title {
-    font-size: 26px;
-    font-weight: 700;
-    color: #0a0a0f;
-    margin-bottom: 6px;
-}
-.tw-section-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #888;
-    margin-bottom: 6px;
-}
-.tw-route-card {
-    background: #fff;
-    border: 1px solid #e8e8f0;
+    border: 1px solid #ebebeb;
     border-radius: 12px;
     padding: 18px 20px;
-    cursor: pointer;
-    transition: box-shadow 0.2s;
 }
-.tw-route-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+.tw-card-sm {
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+/* Badges */
+.badge-buy {
+    background: #1a56db;
+    color: #fff;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+.badge-wait {
+    background: #6b7280;
+    color: #fff;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* Section label */
+.sec-label {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+/* Nav item active */
+.nav-active {
+    background: #f3f4f6;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* Button overrides */
+.stButton > button {
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+}
+.stButton > button[kind="primary"] {
+    background: #1a56db;
+    border: none;
+    color: white;
+}
+
+/* Input fields */
+.stSelectbox > div, .stTextInput > div, .stDateInput > div, .stNumberInput > div {
+    border-radius: 8px;
+}
+
+/* Radio buttons */
+div[data-testid="stRadio"] > div {
+    border: 1px solid #ebebeb;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Session state defaults ───────────────────────────────────────────────────
+# ── Session state ─────────────────────────────────────────────────────────────
 if "watches" not in st.session_state:
     st.session_state.watches = [
-        {"id": 1, "origin": "JFK", "dest": "LAX", "dep_date": "2026-05-10",
-         "arr_date": "2026-05-17", "target": 300, "currency": "USD",
-         "current_price": 287, "recommendation": "BUY", "confidence": 0.82},
-        {"id": 2, "origin": "LGA", "dest": "ORD", "dep_date": "2026-06-01",
-         "arr_date": "2026-06-08", "target": 180, "currency": "USD",
-         "current_price": 210, "recommendation": "WAIT", "confidence": 0.71},
-        {"id": 3, "origin": "EWR", "dest": "MIA", "dep_date": "2026-06-15",
-         "arr_date": "2026-06-22", "target": 220, "currency": "USD",
-         "current_price": 198, "recommendation": "BUY", "confidence": 0.76},
+        {"id": 1, "origin": "NYC", "dest": "LAX",
+         "dep_date": "May 12, 2026", "arr_date": "May 23, 2026",
+         "target": 300, "currency": "USD", "current_price": 348,
+         "recommendation": "WAIT", "confidence": 72, "change_pct": 1.3, "change_dir": "up"},
+        {"id": 2, "origin": "SFO", "dest": "Tokyo",
+         "dep_date": "Jun 1, 2026", "arr_date": "Jun 15, 2026",
+         "target": 650, "currency": "USD", "current_price": 780,
+         "recommendation": "WAIT", "confidence": 72, "change_pct": 0.9, "change_dir": "up"},
+        {"id": 3, "origin": "NYC", "dest": "London",
+         "dep_date": "Jul 4, 2026", "arr_date": "Jul 18, 2026",
+         "target": 550, "currency": "USD", "current_price": 512,
+         "recommendation": "BUY", "confidence": 68, "change_pct": 1.2, "change_dir": "down"},
     ]
 if "selected_watch_id" not in st.session_state:
     st.session_state.selected_watch_id = 1
 if "currency" not in st.session_state:
     st.session_state.currency = "USD"
 if "email_notif" not in st.session_state:
-    st.session_state.email_notif = True
+    st.session_state.email_notif = "On"
 if "price_alert" not in st.session_state:
-    st.session_state.price_alert = True
+    st.session_state.price_alert = "On"
 if "user_email" not in st.session_state:
-    st.session_state.user_email = ""
+    st.session_state.user_email = "lp346@cornell.edu"
 if "page" not in st.session_state:
     st.session_state.page = "Dashboard"
 
-# ── Sidebar ──────────────────────────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
+    # Logo
     st.markdown("""
-    <div style='padding: 8px 0 28px 0;'>
-        <div style='font-size:22px; font-weight:700; letter-spacing:-0.5px; color:#fff;'>
-            ✈ TravelWatch
-        </div>
-        <div style='font-size:11px; color:#555; margin-top:2px; font-family: DM Mono, monospace;'>
-            AI Price Intelligence
+    <div style='padding: 28px 20px 20px 20px; border-bottom: 1px solid #f0f0f0;'>
+        <div style='display:flex; align-items:center; gap:8px;'>
+            <span style='font-size:22px;'>🪁</span>
+            <span style='font-size:17px; font-weight:700; color:#111;'>TravelWatch AI</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    pages = ["Dashboard", "Add New Watch", "Task Detail", "Compare", "ML Insights", "Settings"]
-    icons = ["⬛", "➕", "📋", "⚖️", "🧠", "⚙️"]
+    st.markdown("<div style='padding: 16px 12px 8px 12px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:11px; font-weight:600; color:#9ca3af; letter-spacing:0.08em; margin-bottom:8px;'>MENU</div>", unsafe_allow_html=True)
 
-    for icon, pg in zip(icons, pages):
+    pages = [("🏠", "Dashboard"), ("📄", "Compare"), ("📊", "ML Insights")]
+    for icon, pg in pages:
         active = st.session_state.page == pg
         if st.button(
             f"{icon}  {pg}",
             key=f"nav_{pg}",
             use_container_width=True,
-            type="primary" if active else "secondary",
+            type="secondary",
         ):
             st.session_state.page = pg
             st.rerun()
 
-    st.markdown("<div style='flex:1'></div>", unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Settings + User profile at bottom
+    st.markdown("<div style='position:absolute; bottom:0; left:0; right:0; padding:16px 12px; border-top:1px solid #f0f0f0;'>", unsafe_allow_html=True)
+    if st.button("⚙️  Settings", key="nav_Settings", use_container_width=True):
+        st.session_state.page = "Settings"
+        st.rerun()
+
     st.markdown(f"""
-    <div style='font-size:12px; color:#555; padding: 8px 0;'>
-        <div style='color:#888; margin-bottom:4px;'>Signed in as</div>
-        <div style='color:#ccc;'>{st.session_state.user_email or 'user@example.com'}</div>
+    <div style='background:#f9f9f9; border:1px solid #ebebeb; border-radius:10px;
+                padding:10px 12px; margin-top:8px; display:flex; align-items:center; gap:10px;'>
+        <div style='width:32px; height:32px; background:#e05c3a; border-radius:8px;
+                    display:flex; align-items:center; justify-content:center;
+                    color:white; font-weight:700; font-size:13px;'>L</div>
+        <div>
+            <div style='font-size:13px; font-weight:600; color:#111;'>Lena Park</div>
+            <div style='font-size:11px; color:#9ca3af;'>{st.session_state.user_email}</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ── Page router ──────────────────────────────────────────────────────────────
+# ── Page router ───────────────────────────────────────────────────────────────
 page = st.session_state.page
 
-import sys, os
-sys.path.insert(0, os.path.dirname(__file__))
-from pages import dashboard, task_detail, add_watch, compare, ml_insights, settings
-
 if page == "Dashboard":
-    dashboard.render()
-elif page == "Task Detail":
-    task_detail.render()
+    from pages_code.dashboard import render
 elif page == "Add New Watch":
-    add_watch.render()
+    from pages_code.add_watch import render
+elif page == "Task Detail":
+    from pages_code.task_detail import render
 elif page == "Compare":
-    compare.render()
+    from pages_code.compare import render
 elif page == "ML Insights":
-    ml_insights.render()
+    from pages_code.ml_insights import render
 elif page == "Settings":
-    settings.render()
+    from pages_code.settings import render
 
 render()
