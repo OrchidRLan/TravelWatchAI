@@ -1,146 +1,155 @@
 import streamlit as st
 import plotly.graph_objects as go
 import numpy as np
+import json
+import os
 
 
-def _mock_metrics(model: str):
-    """Return deterministic mock metrics for demo."""
-    if model == "Logistic Regression":
-        return dict(accuracy=0.81, f1=0.78, auc=0.84,
-                    cm=[[312, 48], [61, 279]])
-    else:  # KNN
-        return dict(accuracy=0.77, f1=0.74, auc=0.80,
-                    cm=[[298, 62], [74, 266]])
+@st.cache_data
+def load_model_data():
+    base = os.path.dirname(os.path.dirname(__file__))
+    path = os.path.join(base, "model_weights", "travelwatch_models.json")
+    with open(path, "r") as f:
+        return json.load(f)
 
 
 def render():
-    st.markdown('<div class="tw-page-title">Machine Learning Insights</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div style="color:#888; font-size:14px; margin-bottom:20px;">Explore offline model evaluation results</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<h2 style="font-size:24px;font-weight:700;color:#111;margin:0 0 20px 0;">Machine Learning Insights</h2>', unsafe_allow_html=True)
 
-    # ── Model selector ────────────────────────────────────────────────────────
-    st.markdown('<div class="tw-section-label">Model</div>', unsafe_allow_html=True)
-    model = st.radio(
-        "Select model",
-        options=["Logistic Regression", "KNN"],
-        horizontal=True,
-        label_visibility="collapsed",
-    )
+    try:
+        data = load_model_data()
+        clf  = data["classification"]
+        reg  = data["regression"]
+        lc   = data["learning_curves"]
 
-    metrics = _mock_metrics(model)
-    st.markdown("<br>", unsafe_allow_html=True)
+        # ── Model selector ────────────────────────────────────────────────────
+        st.markdown('<div class="sec-label">Model</div>', unsafe_allow_html=True)
+        model = st.radio("Model", ["Logistic Regression", "KNN"],
+                         label_visibility="collapsed")
 
-    # ── Performance metrics ───────────────────────────────────────────────────
-    st.markdown('<div class="tw-section-label">Model Performance</div>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(
-            f"""<div class="tw-card" style="text-align:center;">
-                <div style="font-size:11px;color:#888;">ACCURACY</div>
-                <div style="font-size:32px;font-weight:700;color:#4f8ef7;">{metrics['accuracy']*100:.1f}%</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-    with c2:
-        st.markdown(
-            f"""<div class="tw-card" style="text-align:center;">
-                <div style="font-size:11px;color:#888;">F1 SCORE</div>
-                <div style="font-size:32px;font-weight:700;color:#4f8ef7;">{metrics['f1']:.3f}</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-    with c3:
-        st.markdown(
-            f"""<div class="tw-card" style="text-align:center;">
-                <div style="font-size:11px;color:#888;">AUC-ROC</div>
-                <div style="font-size:32px;font-weight:700;color:#4f8ef7;">{metrics['auc']:.3f}</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+        if model == "Logistic Regression":
+            m_data = clf["logistic_regression"]
+        else:
+            m_data = clf["knn"]
 
-    col_cm, col_roc = st.columns(2)
+        f1  = m_data["f1"]
+        auc = m_data["auc"]
+        cm  = m_data["confusion_matrix"]
+        acc = (cm[0][0] + cm[1][1]) / (cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1])
 
-    # ── Confusion Matrix ──────────────────────────────────────────────────────
-    with col_cm:
-        st.markdown('<div class="tw-section-label">Confusion Matrix</div>', unsafe_allow_html=True)
-        cm = metrics["cm"]
-        labels = ["Predicted Buy", "Predicted Wait"]
-        fig_cm = go.Figure(go.Heatmap(
-            z=cm,
-            x=labels, y=["Actual Buy", "Actual Wait"],
-            colorscale=[[0, "#f0f4ff"], [1, "#4f8ef7"]],
-            text=[[str(v) for v in row] for row in cm],
-            texttemplate="%{text}",
-            textfont=dict(size=20, color="white"),
-            showscale=False,
-        ))
-        fig_cm.update_layout(
-            height=260, margin=dict(l=10, r=10, t=10, b=10),
-            paper_bgcolor="white", plot_bgcolor="white",
-            xaxis=dict(side="top", tickfont=dict(size=11)),
-            yaxis=dict(tickfont=dict(size=11)),
-            font=dict(family="DM Sans"),
-        )
-        st.plotly_chart(fig_cm, use_container_width=True)
+        # ── Performance metrics ───────────────────────────────────────────────
+        st.markdown('<div class="sec-label">Model Performance</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="tw-card" style="display:flex; padding:0; overflow:hidden; margin-bottom:20px;">
+            <div style="flex:1; padding:16px 20px; border-right:1px solid #ebebeb; text-align:center;">
+                <div style="font-size:13px; font-weight:600; color:#111; margin-bottom:4px;">Accuracy</div>
+                <div style="font-size:15px; color:#374151;">{acc*100:.1f}%</div>
+            </div>
+            <div style="flex:1; padding:16px 20px; border-right:1px solid #ebebeb; text-align:center;">
+                <div style="font-size:13px; font-weight:600; color:#111; margin-bottom:4px;">F1 Score</div>
+                <div style="font-size:15px; color:#374151;">{f1:.3f}</div>
+            </div>
+            <div style="flex:1; padding:16px 20px; text-align:center;">
+                <div style="font-size:13px; font-weight:600; color:#111; margin-bottom:4px;">AUC-ROC</div>
+                <div style="font-size:15px; color:#374151;">{auc:.3f}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # ── ROC Curve ─────────────────────────────────────────────────────────────
-    with col_roc:
-        st.markdown('<div class="tw-section-label">ROC Curve</div>', unsafe_allow_html=True)
-        np.random.seed(42 if model == "Logistic Regression" else 7)
+        # ── Confusion Matrix ──────────────────────────────────────────────────
+        st.markdown('<div class="sec-label">Confusion Matrix</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <table style="border-collapse:collapse; margin-bottom:20px; font-family:Inter,sans-serif;">
+            <thead>
+                <tr>
+                    <td style="padding:8px 16px;"></td>
+                    <td style="padding:8px 24px; font-size:13px; color:#374151; font-weight:500; text-align:center;">Predicted BUY</td>
+                    <td style="padding:8px 24px; font-size:13px; color:#374151; font-weight:500; text-align:center;">Predicted WAIT</td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding:8px 16px; font-size:13px; color:#374151; font-weight:500;">Actual BUY</td>
+                    <td style="border:1px solid #d1d5db; padding:16px 32px; text-align:center; font-size:18px; font-weight:600; color:#111;">{cm[0][0]}</td>
+                    <td style="border:1px solid #d1d5db; padding:16px 32px; text-align:center; font-size:18px; font-weight:600; color:#111;">{cm[0][1]}</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px 16px; font-size:13px; color:#374151; font-weight:500;">Actual WAIT</td>
+                    <td style="border:1px solid #d1d5db; padding:16px 32px; text-align:center; font-size:18px; font-weight:600; color:#111;">{cm[1][0]}</td>
+                    <td style="border:1px solid #d1d5db; padding:16px 32px; text-align:center; font-size:18px; font-weight:600; color:#111;">{cm[1][1]}</td>
+                </tr>
+            </tbody>
+        </table>
+        """, unsafe_allow_html=True)
+
+        # ── ROC Curve ─────────────────────────────────────────────────────────
+        st.markdown('<div class="sec-label">ROC Curve</div>', unsafe_allow_html=True)
         fpr = np.linspace(0, 1, 100)
-        auc_val = metrics["auc"]
-        tpr = np.clip(fpr ** (1 / (auc_val * 3)), 0, 1)
+        tpr = np.clip(fpr ** (1 / (auc * 2.8)), 0, 1)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=fpr, y=tpr, mode="lines",
+                                 line=dict(color="#3b82f6", width=2.5),
+                                 name=f"AUC = {auc:.3f}"))
+        fig.add_trace(go.Scatter(x=[0,1], y=[0,1], mode="lines",
+                                 line=dict(color="#e5e7eb", dash="dash", width=1),
+                                 name="Random"))
+        fig.update_layout(height=300, margin=dict(l=10,r=10,t=10,b=10),
+                          paper_bgcolor="white", plot_bgcolor="white",
+                          xaxis=dict(title="False Positive Rate", gridcolor="#f5f5f5"),
+                          yaxis=dict(title="True Positive Rate", gridcolor="#f5f5f5"),
+                          legend=dict(font=dict(size=11)),
+                          font=dict(family="Inter"))
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-        fig_roc = go.Figure()
-        fig_roc.add_trace(go.Scatter(
-            x=fpr, y=tpr, mode="lines",
-            line=dict(color="#4f8ef7", width=2.5),
-            name=f"AUC = {auc_val:.3f}",
-        ))
-        fig_roc.add_trace(go.Scatter(
-            x=[0, 1], y=[0, 1], mode="lines",
-            line=dict(color="#ddd", dash="dash", width=1),
-            name="Random",
-        ))
-        fig_roc.update_layout(
-            height=260, margin=dict(l=10, r=10, t=10, b=10),
-            paper_bgcolor="white", plot_bgcolor="white",
-            xaxis=dict(title="FPR", gridcolor="#f0f0f5"),
-            yaxis=dict(title="TPR", gridcolor="#f0f0f5"),
-            legend=dict(font=dict(size=11)),
-            font=dict(family="DM Sans"),
-        )
-        st.plotly_chart(fig_roc, use_container_width=True)
+        # ── Regression Results ────────────────────────────────────────────────
+        st.markdown("---")
+        st.markdown('<div class="sec-label">Regression Results (Price Prediction)</div>', unsafe_allow_html=True)
+        ridge = reg["ridge"]
+        lasso = reg["lasso"]
+        st.markdown(f"""
+        <div class="tw-card" style="display:flex; padding:0; overflow:hidden; margin-bottom:20px;">
+            <div style="flex:1; padding:16px 20px; border-right:1px solid #ebebeb; text-align:center;">
+                <div style="font-size:13px; font-weight:600; color:#111; margin-bottom:8px;">Ridge Regression</div>
+                <div style="font-size:13px; color:#374151;">R² = {ridge['r2']:.4f}</div>
+                <div style="font-size:13px; color:#374151;">RMSE = {ridge['rmse']:.1f}</div>
+                <div style="font-size:13px; color:#374151;">MAE = {ridge['mae']:.1f}</div>
+            </div>
+            <div style="flex:1; padding:16px 20px; text-align:center;">
+                <div style="font-size:13px; font-weight:600; color:#111; margin-bottom:8px;">Lasso Regression</div>
+                <div style="font-size:13px; color:#374151;">R² = {lasso['r2']:.4f}</div>
+                <div style="font-size:13px; color:#374151;">RMSE = {lasso['rmse']:.1f}</div>
+                <div style="font-size:13px; color:#374151;">MAE = {lasso['mae']:.1f}</div>
+            </div>
+        </div>
+        <div style="font-size:12px; color:#6b7280; margin-bottom:20px;">
+            ✅ Deployed model: <b>{reg['best_model']}</b> (selected based on R² performance)
+        </div>
+        """, unsafe_allow_html=True)
 
-    # ── Learning Curves (Regression) ──────────────────────────────────────────
-    st.markdown("---")
-    st.markdown('<div class="tw-section-label">Regression Learning Curves (Ridge vs Lasso)</div>', unsafe_allow_html=True)
-    sizes = [1000, 5000, 10000, 50000, 100000, 200000, 300000]
-    np.random.seed(1)
-    ridge_train = [0.91 - 0.01 * i + np.random.randn() * 0.005 for i in range(7)]
-    ridge_val = [0.75 + 0.02 * i + np.random.randn() * 0.005 for i in range(7)]
-    lasso_train = [0.89 - 0.01 * i + np.random.randn() * 0.005 for i in range(7)]
-    lasso_val = [0.73 + 0.018 * i + np.random.randn() * 0.005 for i in range(7)]
+        # ── Learning Curves ───────────────────────────────────────────────────
+        st.markdown('<div class="sec-label">Learning Curves (Ridge vs Lasso)</div>', unsafe_allow_html=True)
+        fig_lc = go.Figure()
+        fig_lc.add_trace(go.Scatter(x=lc["ridge_sizes"], y=lc["ridge_train_r2"],
+                                    mode="lines+markers", name="Ridge Train",
+                                    line=dict(color="#3b82f6", width=2)))
+        fig_lc.add_trace(go.Scatter(x=lc["ridge_sizes"], y=lc["ridge_val_r2"],
+                                    mode="lines+markers", name="Ridge Val",
+                                    line=dict(color="#3b82f6", dash="dash", width=2)))
+        fig_lc.add_trace(go.Scatter(x=lc["lasso_sizes"], y=lc["lasso_train_r2"],
+                                    mode="lines+markers", name="Lasso Train",
+                                    line=dict(color="#e05c3a", width=2)))
+        fig_lc.add_trace(go.Scatter(x=lc["lasso_sizes"], y=lc["lasso_val_r2"],
+                                    mode="lines+markers", name="Lasso Val",
+                                    line=dict(color="#e05c3a", dash="dash", width=2)))
+        fig_lc.update_layout(height=300, margin=dict(l=10,r=10,t=10,b=10),
+                              paper_bgcolor="white", plot_bgcolor="white",
+                              xaxis=dict(title="Training Set Size", gridcolor="#f5f5f5"),
+                              yaxis=dict(title="R² Score", gridcolor="#f5f5f5"),
+                              legend=dict(font=dict(size=11), orientation="h", y=-0.25),
+                              font=dict(family="Inter"))
+        st.plotly_chart(fig_lc, use_container_width=True, config={"displayModeBar": False})
 
-    fig_lc = go.Figure()
-    fig_lc.add_trace(go.Scatter(x=sizes, y=ridge_train, mode="lines+markers",
-                                name="Ridge Train", line=dict(color="#4f8ef7", width=2)))
-    fig_lc.add_trace(go.Scatter(x=sizes, y=ridge_val, mode="lines+markers",
-                                name="Ridge Val", line=dict(color="#4f8ef7", dash="dash", width=2)))
-    fig_lc.add_trace(go.Scatter(x=sizes, y=lasso_train, mode="lines+markers",
-                                name="Lasso Train", line=dict(color="#e05c3a", width=2)))
-    fig_lc.add_trace(go.Scatter(x=sizes, y=lasso_val, mode="lines+markers",
-                                name="Lasso Val", line=dict(color="#e05c3a", dash="dash", width=2)))
-    fig_lc.update_layout(
-        height=300, margin=dict(l=10, r=10, t=10, b=10),
-        paper_bgcolor="white", plot_bgcolor="white",
-        xaxis=dict(title="Training Set Size", gridcolor="#f0f0f5", type="log"),
-        yaxis=dict(title="R² Score", gridcolor="#f0f0f5", range=[0.6, 1.0]),
-        legend=dict(font=dict(size=11), orientation="h", y=-0.2),
-        font=dict(family="DM Sans"),
-    )
-    st.plotly_chart(fig_lc, use_container_width=True)
+    except FileNotFoundError:
+        st.warning("Model weights not found. Please run the training notebook first.")

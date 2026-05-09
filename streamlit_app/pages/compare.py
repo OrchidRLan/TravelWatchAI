@@ -6,14 +6,10 @@ import numpy as np
 def render():
     watches = st.session_state.watches
 
-    st.markdown('<div class="tw-page-title">Compare Routes</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div style="color:#888; font-size:14px; margin-bottom:20px;">Side-by-side price comparison across your watched routes</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<h2 style="font-size:24px;font-weight:700;color:#111;margin:0 0 20px 0;">Compare Routes</h2>', unsafe_allow_html=True)
 
     if len(watches) < 2:
-        st.info("Add at least 2 watch routes to compare.")
+        st.info("Add at least 2 routes to compare.")
         if st.button("➕ Add New Watch"):
             st.session_state.page = "Add New Watch"
             st.rerun()
@@ -21,96 +17,65 @@ def render():
 
     display = watches[:3]
     n = len(display)
-    cols = st.columns(n)
-    colors = ["#4f8ef7", "#e05c3a", "#1a9e6e"]
 
-    # ── Route name headers ────────────────────────────────────────────────────
-    st.markdown('<div class="tw-section-label">Routes</div>', unsafe_allow_html=True)
+    # ── Route dropdown selectors ──────────────────────────────────────────────
+    all_labels = [f"{w['origin']} - {w['dest']}" for w in watches]
     cols = st.columns(n)
-    for i, w in enumerate(display):
+    selected_watches = []
+    for i in range(n):
         with cols[i]:
-            st.markdown(
-                f"""
-                <div class="tw-card" style="border-top: 3px solid {colors[i]};">
-                    <div style="font-size:11px;color:#888;">ROUTE {i+1}</div>
-                    <div style="font-size:18px;font-weight:700;font-family:DM Mono,monospace;margin-top:4px;">
-                        {w['origin']} → {w['dest']}
-                    </div>
-                    <div style="font-size:11px;color:#aaa;margin-top:2px;">{w['dep_date']}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            default = display[i]
+            idx = next((j for j, w in enumerate(watches) if w["id"] == default["id"]), 0)
+            chosen = st.selectbox(f"Route {i+1}", all_labels, index=idx,
+                                  key=f"compare_sel_{i}", label_visibility="collapsed")
+            chosen_w = next(w for w in watches if f"{w['origin']} - {w['dest']}" == chosen)
+            selected_watches.append(chosen_w)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── Price charts ──────────────────────────────────────────────────────────
-    st.markdown('<div class="tw-section-label">Price Trends</div>', unsafe_allow_html=True)
+    # ── Mini charts ───────────────────────────────────────────────────────────
+    chart_styles = [
+        ("rgba(239,68,68,0.8)", "rgba(239,68,68,0.12)", "dot"),
+        ("rgba(34,197,94,0.9)", "rgba(34,197,94,0.2)", "solid"),
+        ("rgba(239,68,68,0.8)", "rgba(239,68,68,0.12)", "dot"),
+    ]
     cols = st.columns(n)
-    for i, w in enumerate(display):
+    for i, w in enumerate(selected_watches):
         with cols[i]:
             np.random.seed(w["id"] * 13)
-            days = list(range(30, 0, -1))
-            prices = w["current_price"] + np.cumsum(np.random.randn(30) * 9)
-            prices = np.clip(prices, 80, 700)
+            x = ["10/1","10/9","10/18","10/27"]
+            prices = w["current_price"] + np.cumsum(np.random.randn(4) * 60)
+            prices = np.clip(prices, 100, 1200)
+            lc, fc, dash = chart_styles[i % 3]
+
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=days, y=prices, mode="lines",
-                line=dict(color=colors[i], width=2),
-                fill="tozeroy", fillcolor=f"rgba{tuple(list(int(colors[i].lstrip('#')[j:j+2], 16) for j in (0,2,4)) + [0.08])}",
-                hovertemplate="Day -%{x}<br>$%{y:.0f}<extra></extra>",
+                x=x, y=prices, mode="lines",
+                line=dict(color=lc, width=2, dash=dash),
+                fill="tozeroy", fillcolor=fc,
             ))
-            fig.add_hline(y=w["target"], line_dash="dot", line_color="#999",
-                          annotation_text="target")
             fig.update_layout(
-                height=180, margin=dict(l=4, r=4, t=4, b=4),
+                height=160, margin=dict(l=0, r=0, t=0, b=20),
                 paper_bgcolor="white", plot_bgcolor="white",
-                xaxis=dict(gridcolor="#f5f5f5", showticklabels=False),
-                yaxis=dict(gridcolor="#f5f5f5", tickfont=dict(size=10)),
-                showlegend=False, font=dict(family="DM Sans"),
+                showlegend=False,
+                xaxis=dict(showgrid=False, tickfont=dict(size=9, color="#9ca3af"), tickvals=x),
+                yaxis=dict(showgrid=False, visible=False),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-    # ── Stats rows ────────────────────────────────────────────────────────────
-    for label, key, prefix in [
-        ("Current Price", "current_price", "$"),
-        ("Target Price", "target", "$"),
-    ]:
-        st.markdown(f'<div class="tw-section-label">{label}</div>', unsafe_allow_html=True)
-        cols = st.columns(n)
-        for i, w in enumerate(display):
-            with cols[i]:
-                val = w[key]
-                is_best = key == "current_price" and val == min(x[key] for x in display)
-                color = "#1a9e6e" if is_best else "#0a0a0f"
-                st.markdown(
-                    f"""
-                    <div class="tw-card" style="margin-bottom:8px;">
-                        <div style="font-size:22px;font-weight:700;color:{color};">{prefix}{val}</div>
-                        {"<div style='font-size:10px;color:#1a9e6e;margin-top:2px;'>✓ Lowest</div>" if is_best else ""}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-    # ── Insight row ───────────────────────────────────────────────────────────
-    st.markdown('<div class="tw-section-label">ML Insight</div>', unsafe_allow_html=True)
+    # ── Stats ─────────────────────────────────────────────────────────────────
     cols = st.columns(n)
-    for i, w in enumerate(display):
+    for i, w in enumerate(selected_watches):
         with cols[i]:
-            badge = (
-                '<span class="tw-badge-buy">BUY</span>'
-                if w["recommendation"] == "BUY"
-                else '<span class="tw-badge-wait">WAIT</span>'
-            )
-            st.markdown(
-                f"""
-                <div class="tw-card">
-                    {badge}
-                    <div style="font-size:11px;color:#aaa;margin-top:8px;">
-                        {int(w['confidence']*100)}% confidence
-                    </div>
+            st.markdown(f"""
+            <div style="margin-bottom:4px;">
+                <div class="sec-label">Current Price</div>
+                <div style="font-size:22px; font-weight:700; color:#111; margin-bottom:12px;">${w['current_price']}</div>
+                <div class="sec-label">Target Price</div>
+                <div style="font-size:22px; font-weight:700; color:#111; margin-bottom:12px;">${w['target']}</div>
+                <div class="sec-label">Insight</div>
+                <div style="font-size:18px; font-weight:700; color:#111;">
+                    {'Buy' if w['recommendation']=='BUY' else 'Wait'}
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            </div>
+            """, unsafe_allow_html=True)
