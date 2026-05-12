@@ -324,3 +324,32 @@ def skyscanner_search_url(origin: str, destination: str, dep_date: str,
     dst = (destination or "").lower()
     qs = f"?adultsv2={max(1, int(adults))}&cabinclass={cabin_class.lower()}&rtn=0"
     return f"https://www.skyscanner.com/transport/flights/{o}/{dst}/{ymd}/{qs}"
+
+def get_current_price(
+    origin: str,
+    destination: str,
+    date: str,
+    target: int,
+    cabin_class: str = "economy",
+    adults: int = 1,
+    currency: str = "USD",
+) -> int:
+    """
+    Return live Skyscanner price if available.
+    If unavailable, return estimated fallback around target price.
+    """
+    result = fetch_cheapest_price(
+        origin=origin,
+        destination=destination,
+        date=date,
+        cabin_class=cabin_class,
+        api_key=_api_key(),
+        adults=adults,
+        currency=currency,
+    )
+
+    if result.get("price"):
+        return int(result["price"])
+
+    # fallback estimate if no API key / no flights / API error
+    return int(target)

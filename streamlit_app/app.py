@@ -161,25 +161,26 @@ with st.sidebar:
     st.markdown("<div style='font-size:11px; font-weight:600; color:#9ca3af; letter-spacing:0.08em; margin-bottom:8px;'>MENU</div>", unsafe_allow_html=True)
 
     main_pages = [
-        ("🏠", "Dashboard", "Dashboard"),
-        ("📊", "ML Insights", "ML Insights"),
-    ]
+    ("🏠", "Dashboard", "Dashboard"),
+    ("🤖", "AI Agent", "AI Agent"),
+    ("📊", "ML Insights", "ML Insights"),
+]
+
     dashboard_pages = {"Dashboard", "Add New Watch", "See All", "Task Detail", "Compare"}
 
     for icon, label, target_page in main_pages:
         active = st.session_state.page == target_page
+
         if target_page == "Dashboard":
             active = st.session_state.page in dashboard_pages
+
         if st.button(
             f"{icon}  {label}",
             key=f"nav_{label}",
             use_container_width=True,
             type="primary" if active else "secondary",
         ):
-            if target_page == "ML Insights":
-                _go_to("ML Insights", st.session_state.ml_section)
-            else:
-                _go_to("Dashboard")
+            _go_to(target_page)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -214,6 +215,8 @@ elif page == "View Data":
     from views.view_data import render
 elif page == "Settings":
     from views.settings import render
+elif page == "AI Agent":
+    from views.ai_agent import render
 else:
     from views.dashboard import render
 
