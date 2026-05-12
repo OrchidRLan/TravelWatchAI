@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import requests
 import streamlit as st
+from airports_db import search_airports_local
 
 _BASE = "https://sky-scrapper.p.rapidapi.com"
 _HOST = "sky-scrapper.p.rapidapi.com"
@@ -35,6 +36,29 @@ _CURRENCY_MARKET = {
     "CHF": ("de-CH", "CH"),
 }
 
+_FALLBACK_AIRPORTS = [
+    {"skyId": "ATL", "entityId": "", "name": "Atlanta Hartsfield-Jackson", "subtitle": "Atlanta, United States"},
+    {"skyId": "BOM", "entityId": "", "name": "Mumbai", "subtitle": "Mumbai, India"},
+    {"skyId": "BLR", "entityId": "", "name": "Bengaluru", "subtitle": "Bangalore, India"},
+    {"skyId": "CDG", "entityId": "", "name": "Paris Charles de Gaulle", "subtitle": "Paris, France"},
+    {"skyId": "CCU", "entityId": "", "name": "Kolkata", "subtitle": "Kolkata, India"},
+    {"skyId": "DEL", "entityId": "", "name": "Indira Gandhi International", "subtitle": "Delhi, India"},
+    {"skyId": "DFW", "entityId": "", "name": "Dallas Fort Worth International", "subtitle": "Dallas, United States"},
+    {"skyId": "DXB", "entityId": "", "name": "Dubai", "subtitle": "Dubai, United Arab Emirates"},
+    {"skyId": "EWR", "entityId": "", "name": "Newark Liberty International", "subtitle": "New York, United States"},
+    {"skyId": "HKG", "entityId": "", "name": "Hong Kong International", "subtitle": "Hong Kong"},
+    {"skyId": "HYD", "entityId": "", "name": "Hyderabad", "subtitle": "Hyderabad, India"},
+    {"skyId": "JFK", "entityId": "", "name": "New York John F. Kennedy", "subtitle": "New York, United States"},
+    {"skyId": "LAX", "entityId": "", "name": "Los Angeles International", "subtitle": "Los Angeles, United States"},
+    {"skyId": "LHR", "entityId": "", "name": "London Heathrow", "subtitle": "London, United Kingdom"},
+    {"skyId": "MAA", "entityId": "", "name": "Chennai", "subtitle": "Chennai, India"},
+    {"skyId": "ORD", "entityId": "", "name": "Chicago O'Hare International", "subtitle": "Chicago, United States"},
+    {"skyId": "SFO", "entityId": "", "name": "San Francisco International", "subtitle": "San Francisco, United States"},
+    {"skyId": "SIN", "entityId": "", "name": "Singapore Changi", "subtitle": "Singapore"},
+    {"skyId": "SYD", "entityId": "", "name": "Sydney", "subtitle": "Sydney, Australia"},
+    {"skyId": "NRT", "entityId": "", "name": "Tokyo Narita", "subtitle": "Tokyo, Japan"},
+]
+
 
 def _market_for(currency: str) -> tuple[str, str]:
     return _CURRENCY_MARKET.get((currency or "USD").upper(), ("en-US", "US"))
@@ -49,6 +73,39 @@ def _api_key() -> str:
 
 def _headers(key: str) -> dict:
     return {"x-rapidapi-key": key, "x-rapidapi-host": _HOST}
+
+
+def _airport_ids(place: dict) -> tuple[str, str]:
+    params = (
+        place.get("navigation", {}).get("relevantFlightParams", {})
+        or place.get("relevantFlightParams", {})
+        or {}
+    )
+    sky_id = place.get("skyId") or params.get("skyId") or params.get("flightPlaceId") or ""
+    entity_id = place.get("entityId") or params.get("entityId") or ""
+    return sky_id, entity_id
+
+
+def _airport_name(place: dict, fallback: str) -> tuple[str, str]:
+    pres = place.get("presentation", {}) or {}
+    nav = place.get("navigation", {}) or {}
+    name = pres.get("title") or nav.get("localizedName") or place.get("name") or fallback
+    subtitle = pres.get("subtitle") or place.get("subtitle") or ""
+    return name, subtitle
+
+
+def _fallback_airport_search(query: str, limit: int = 8) -> list[dict]:
+    q = (query or "").strip().lower()
+    if len(q) < 2:
+        return []
+    matches = []
+    for airport in _FALLBACK_AIRPORTS:
+        haystack = " ".join(
+            [airport["skyId"], airport["name"], airport.get("subtitle", "")]
+        ).lower()
+        if q in haystack:
+            matches.append(airport)
+    return matches[:limit]
 
 
 def _secret(name: str, default: str = "") -> str:
@@ -92,12 +149,18 @@ def _airport_entity(city: str, api_key: str) -> dict | None:
         # Prefer AIRPORT entity over CITY
         for p in places:
             if p.get("navigation", {}).get("entityType") == "AIRPORT":
-                return {"skyId": p["skyId"], "entityId": p["entityId"]}
+                sky_id, entity_id = _airport_ids(p)
+                if sky_id:
+                    return {"skyId": sky_id, "entityId": entity_id}
         if places:
             p = places[0]
-            return {"skyId": p["skyId"], "entityId": p["entityId"]}
+            sky_id, entity_id = _airport_ids(p)
+            if sky_id:
+                return {"skyId": sky_id, "entityId": entity_id}
     except Exception:
         pass
+    for airport in _fallback_airport_search(city, limit=1):
+        return {"skyId": airport["skyId"], "entityId": airport["entityId"]}
     return None
 
 
@@ -159,34 +222,15 @@ def fetch_cheapest_price(
         return {"price": None, "error": str(e)}
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
-def search_airports(query: str, api_key: str) -> list[dict]:
+def search_airports(query: str, api_key: str) -> tuple[list[dict], str | None]:
     """
-    Return up to 8 airport/city results matching query.
-    Each entry: {skyId, entityId, name, subtitle}.
+    Return (results, error_message).
+    Always searches the bundled local database first (instant, zero quota).
+    Returns (local_results, None) — no API calls for airport search.
     """
-    if not api_key or len(query) < 2:
-        return []
-    try:
-        r = requests.get(
-            f"{_BASE}/api/v1/flights/searchAirport",
-            headers=_headers(api_key),
-            params={"query": query, "locale": "en-US"},
-            timeout=10,
-        )
-        r.raise_for_status()
-        out = []
-        for p in r.json().get("data", [])[:8]:
-            pres = p.get("presentation", {})
-            out.append({
-                "skyId": p.get("skyId", ""),
-                "entityId": p.get("entityId", ""),
-                "name": pres.get("title", p.get("skyId", query)),
-                "subtitle": pres.get("subtitle", ""),
-            })
-        return out
-    except Exception:
-        return []
+    if len(query) < 2:
+        return [], None
+    return search_airports_local(query), None
 
 
 def get_current_price(

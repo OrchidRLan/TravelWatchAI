@@ -33,17 +33,17 @@ def _airport_field(label: str, widget_key: str) -> dict | None:
     query = st.text_input(
         label,
         key=f"{widget_key}_q",
-        placeholder="Type city or airport (e.g. London, JFK, DEL, Mumbai)...",
+        placeholder="Type city or IATA code (e.g. London, Mumbai, JFK, SIN, DEL)...",
         label_visibility="collapsed",
     )
 
     if not query or len(query) < 2:
-        st.caption("Type at least 2 characters to search.")
+        st.caption("Type city, country, IATA code, or abbreviation (NY, LA, HK…)")
         return None
 
-    results = search_airports(query, key)
+    results, _ = search_airports(query, key)
     if not results:
-        st.caption("No airports found — try a different query.")
+        st.caption("No airports found — try city name, country, or IATA code (e.g. London, India, JFK).")
         return None
 
     labels = [
