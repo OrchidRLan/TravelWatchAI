@@ -140,7 +140,7 @@ if "email_notif" not in st.session_state:
 if "price_alert" not in st.session_state:
     st.session_state.price_alert = "On"
 if "user_email" not in st.session_state:
-    st.session_state.user_email = "useremail@gmail.com"
+    st.session_state.user_email = "lp346@cornell.edu"
 if "page" not in st.session_state:
     st.session_state.page = "Dashboard"
 
@@ -186,7 +186,7 @@ with st.sidebar:
                     display:flex; align-items:center; justify-content:center;
                     color:white; font-weight:700; font-size:13px;'>L</div>
         <div>
-            <div style='font-size:13px; font-weight:600; color:#111;'>User Name</div>
+            <div style='font-size:13px; font-weight:600; color:#111;'>Lena Park</div>
             <div style='font-size:11px; color:#9ca3af;'>{st.session_state.user_email}</div>
         </div>
     </div>
@@ -197,16 +197,16 @@ with st.sidebar:
 page = st.session_state.page
 
 if page == "Dashboard":
-    from pages_code.dashboard import render
+    from pages.dashboard import render
 elif page == "Add New Watch":
-    from pages_code.add_watch import render
+    from pages.add_watch import render
 elif page == "Task Detail":
-    from pages_code.task_detail import render
+    from pages.task_detail import render
 elif page == "Compare":
-    from pages_code.compare import render
+    from pages.compare import render
 elif page == "ML Insights":
-    from pages_code.ml_insights import render
+    from pages.ml_insights import render
 elif page == "Settings":
-    from pages_code.settings import render
+    from pages.settings import render
 
 render()
