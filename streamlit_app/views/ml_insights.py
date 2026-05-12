@@ -2,6 +2,7 @@ import json
 import os
 
 import plotly.graph_objects as go
+from sklearn.metrics import auc
 import streamlit as st
 
 
@@ -80,16 +81,15 @@ def _render_model_evaluation(data):
     acc = (cm[0][0] + cm[1][1]) / (cm[0][0] + cm[0][1] + cm[1][0] + cm[1][1])
 
     st.markdown('<div class="sec-label">Classification Performance</div>', unsafe_allow_html=True)
-    st.markdown(
-        f"""
-        <div class="tw-card" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
-            {_metric_card("Accuracy", f"{acc*100:.1f}%")}
-            {_metric_card("F1 Score", f"{f1:.3f}")}
-            {_metric_card("AUC-ROC", f"{auc:.3f}")}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Accuracy", f"{acc*100:.1f}%")
+
+    with col2:
+        st.metric("F1 Score", f"{f1:.3f}")
+
+    with col3:
+        st.metric("AUC-ROC", f"{auc:.3f}")
 
     st.markdown('<div class="sec-label">Confusion Matrix</div>', unsafe_allow_html=True)
     st.markdown(f"""
