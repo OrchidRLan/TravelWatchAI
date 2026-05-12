@@ -123,8 +123,13 @@ def render():
         class_type = st.selectbox("Class", options=CLASSES, index=0, label_visibility="collapsed")
     with col2:
         st.markdown('<div class="sec-label">Number of Stops</div>', unsafe_allow_html=True)
-        stops_label, stops_val = st.selectbox("Stops", options=STOPS_OPTIONS, index=0,
-                                              label_visibility="collapsed")
+        stops_label, stops_val = st.selectbox(
+                "Stops",
+                options=STOPS_OPTIONS,
+                index=0,
+                format_func=lambda x: x[0],
+                label_visibility="collapsed",
+        )
 
     col3, col4 = st.columns(2)
     with col3:
