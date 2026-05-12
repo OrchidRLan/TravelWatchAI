@@ -1,4 +1,4 @@
-﻿# TravelWatchAI
+# TravelWatchAI
 info5368 Flight price prediction + BUY/WAIT agent
 
 ## Dataset
@@ -52,3 +52,22 @@ source .venv-travelwatch/bin/activate
 cd streamlit_app
 streamlit run app.py
 ```
+
+## App Pages
+- **Dashboard** — overview cards for the most recent watches, multi-route price chart, and Book/Search links per route.
+- **See All** — full list of every watch with route, date, current price, recommendation, status, View Detail, and Book/Search action.
+- **Add New Watch** — origin, destination, dep/arr date, target price, currency, adults, cabin class (and optional stops/time).
+- **Compare** — pick up to 3 routes, see current lowest price, AI predicted price, BUY/WAIT and estimated saving vs target.
+- **Task Detail** — single watch view with a Buy/Wait reason narrative, observed-price chart, top Skyscanner itineraries, and a Book Now link that's gated on BUY.
+- **ML Insights** — F1 / AUC / confusion matrix / ROC for the classifier, plus R² / RMSE / MAE for Ridge vs Lasso and learning curves.
+- **View Data** — dataset preview, columns, missing values, price distribution, correlation heatmap, and the processed (one-hot + standardized) feature matrix.
+
+
+## Add your API keys
+Create `streamlit_app/.streamlit/secrets.toml`:
+
+```toml
+RAPIDAPI_KEY = "your key"
+```
+
+You can also set `RAPIDAPI_KEY` as an environment variable.

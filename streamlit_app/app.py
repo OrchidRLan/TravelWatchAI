@@ -1,4 +1,7 @@
 import streamlit as st
+from datetime import date, timedelta
+from prediction_engine import predict_flight
+from skyscanner_api import get_current_price, _api_key
 
 st.set_page_config(
     page_title="TravelWatch AI",
@@ -12,9 +15,6 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-/* Hide default nav */
-[data-testid="stSidebarNav"] { display: none; }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
@@ -116,33 +116,100 @@ div[data-testid="stRadio"] > div {
 """, unsafe_allow_html=True)
 
 # ── Session state ─────────────────────────────────────────────────────────────
+@st.cache_data(ttl=3600)
+def generate_initial_watches():
+    """Generate initial sample flights with AI predictions and live Skyscanner prices."""
+    try:
+        if not _api_key():
+            st.warning(
+                "Skyscanner prices unavailable — set RAPIDAPI_KEY in your environment "
+                "or .streamlit/secrets.toml to enable live pricing.",
+                icon="⚠️",
+            )
+
+        sample_flights = [
+            {"origin": "DEL", "destination": "BOM", "dep_date": "2026-05-20", "arr_date": "2026-05-20", "target": 5500, "currency": "INR"},
+            {"origin": "BLR", "destination": "DEL", "dep_date": "2026-05-25", "arr_date": "2026-05-25", "target": 6200, "currency": "INR"},
+            {"origin": "MAA", "destination": "CCU", "dep_date": "2026-06-01", "arr_date": "2026-06-01", "target": 5800, "currency": "INR"},
+        ]
+
+        watches = []
+        for i, flight in enumerate(sample_flights, 1):
+            current_price = get_current_price(
+                flight["origin"], flight["destination"],
+                flight["dep_date"], flight["target"],
+                cabin_class="economy",
+                adults=1,
+                currency=flight["currency"],
+            )
+
+            flight_data = {
+                'origin': flight["origin"],
+                'destination': flight["destination"],
+                'dep_date': flight["dep_date"],
+                'arr_date': flight["arr_date"],
+                'current_price': current_price,
+                'target': flight["target"],
+                'class': 'Economy',
+                'stops': 0,
+            }
+
+            prediction = predict_flight(flight_data)
+
+            watches.append({
+                "id": i,
+                "origin": flight["origin"],
+                "dest": flight["destination"],
+                "dep_date": flight["dep_date"],
+                "arr_date": flight["arr_date"],
+                "target": flight["target"],
+                "currency": flight["currency"],
+                "adults": 1,
+                "class": "Economy",
+                "stops": 0,
+                "current_price": current_price,
+                "recommendation": prediction["recommendation"],
+                "confidence": prediction["confidence"],
+                "change_pct": prediction["change_pct"],
+                "change_dir": prediction["change_dir"],
+                "predicted_price": prediction["predicted_price"],
+                "price_source": "live" if current_price else "estimated",
+                "price_history": [
+                    {"date": str(date.today()), "price": current_price, "source": "live"},
+                ],
+            })
+
+        return watches
+    except Exception as e:
+        # Fallback to simple defaults if prediction fails
+        st.warning(f"Could not generate predictions: {e}")
+        return [
+            {"id": 1, "origin": "Delhi", "dest": "Mumbai",
+             "dep_date": "2026-05-20", "arr_date": "2026-05-20",
+             "target": 5500, "currency": "INR", "current_price": 5200,
+             "recommendation": "BUY", "confidence": 85, "change_pct": 5.8, "change_dir": "down",
+             "predicted_price": 5200},
+        ]
+
 if "watches" not in st.session_state:
-    st.session_state.watches = [
-        {"id": 1, "origin": "NYC", "dest": "LAX",
-         "dep_date": "May 12, 2026", "arr_date": "May 23, 2026",
-         "target": 300, "currency": "USD", "current_price": 348,
-         "recommendation": "WAIT", "confidence": 72, "change_pct": 1.3, "change_dir": "up"},
-        {"id": 2, "origin": "SFO", "dest": "Tokyo",
-         "dep_date": "Jun 1, 2026", "arr_date": "Jun 15, 2026",
-         "target": 650, "currency": "USD", "current_price": 780,
-         "recommendation": "WAIT", "confidence": 72, "change_pct": 0.9, "change_dir": "up"},
-        {"id": 3, "origin": "NYC", "dest": "London",
-         "dep_date": "Jul 4, 2026", "arr_date": "Jul 18, 2026",
-         "target": 550, "currency": "USD", "current_price": 512,
-         "recommendation": "BUY", "confidence": 68, "change_pct": 1.2, "change_dir": "down"},
-    ]
+    st.session_state.watches = generate_initial_watches()
 if "selected_watch_id" not in st.session_state:
     st.session_state.selected_watch_id = 1
 if "currency" not in st.session_state:
     st.session_state.currency = "USD"
-if "email_notif" not in st.session_state:
-    st.session_state.email_notif = "On"
 if "price_alert" not in st.session_state:
     st.session_state.price_alert = "On"
-if "user_email" not in st.session_state:
-    st.session_state.user_email = "lp346@cornell.edu"
 if "page" not in st.session_state:
     st.session_state.page = "Dashboard"
+if "ml_section" not in st.session_state:
+    st.session_state.ml_section = "Model Evaluation"
+
+
+def _go_to(page, ml_section=None):
+    st.session_state.page = page
+    if ml_section is not None:
+        st.session_state.ml_section = ml_section
+    st.rerun()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -159,54 +226,61 @@ with st.sidebar:
     st.markdown("<div style='padding: 16px 12px 8px 12px;'>", unsafe_allow_html=True)
     st.markdown("<div style='font-size:11px; font-weight:600; color:#9ca3af; letter-spacing:0.08em; margin-bottom:8px;'>MENU</div>", unsafe_allow_html=True)
 
-    pages = [("🏠", "Dashboard"), ("📄", "Compare"), ("📊", "ML Insights")]
-    for icon, pg in pages:
-        active = st.session_state.page == pg
+    main_pages = [
+        ("🏠", "Dashboard", "Dashboard"),
+        ("📊", "ML Insights", "ML Insights"),
+    ]
+    dashboard_pages = {"Dashboard", "Add New Watch", "See All", "Task Detail", "Compare"}
+
+    for icon, label, target_page in main_pages:
+        active = st.session_state.page == target_page
+        if target_page == "Dashboard":
+            active = st.session_state.page in dashboard_pages
         if st.button(
-            f"{icon}  {pg}",
-            key=f"nav_{pg}",
+            f"{icon}  {label}",
+            key=f"nav_{label}",
             use_container_width=True,
-            type="secondary",
+            type="primary" if active else "secondary",
         ):
-            st.session_state.page = pg
-            st.rerun()
+            if target_page == "ML Insights":
+                _go_to("ML Insights", st.session_state.ml_section)
+            else:
+                _go_to("Dashboard")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Settings + User profile at bottom
+    # Settings at bottom
     st.markdown("<div style='position:absolute; bottom:0; left:0; right:0; padding:16px 12px; border-top:1px solid #f0f0f0;'>", unsafe_allow_html=True)
-    if st.button("⚙️  Settings", key="nav_Settings", use_container_width=True):
+    if st.button(
+        "⚙️  Settings",
+        key="nav_Settings",
+        use_container_width=True,
+        type="primary" if st.session_state.page == "Settings" else "secondary",
+    ):
         st.session_state.page = "Settings"
         st.rerun()
-
-    st.markdown(f"""
-    <div style='background:#f9f9f9; border:1px solid #ebebeb; border-radius:10px;
-                padding:10px 12px; margin-top:8px; display:flex; align-items:center; gap:10px;'>
-        <div style='width:32px; height:32px; background:#e05c3a; border-radius:8px;
-                    display:flex; align-items:center; justify-content:center;
-                    color:white; font-weight:700; font-size:13px;'>L</div>
-        <div>
-            <div style='font-size:13px; font-weight:600; color:#111;'>Lena Park</div>
-            <div style='font-size:11px; color:#9ca3af;'>{st.session_state.user_email}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ── Page router ───────────────────────────────────────────────────────────────
 page = st.session_state.page
 
 if page == "Dashboard":
-    from pages.dashboard import render
+    from views.dashboard import render
 elif page == "Add New Watch":
-    from pages.add_watch import render
+    from views.add_watch import render
 elif page == "Task Detail":
-    from pages.task_detail import render
+    from views.task_detail import render
+elif page == "See All":
+    from views.see_all import render
 elif page == "Compare":
-    from pages.compare import render
+    from views.compare import render
 elif page == "ML Insights":
-    from pages.ml_insights import render
+    from views.ml_insights import render
+elif page == "View Data":
+    from views.view_data import render
 elif page == "Settings":
-    from pages.settings import render
+    from views.settings import render
+else:
+    from views.dashboard import render
 
 render()
