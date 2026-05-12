@@ -10,7 +10,6 @@ import tomllib
 from functools import lru_cache
 from pathlib import Path
 
-import numpy as np
 import requests
 import streamlit as st
 from airports_db import search_airports_local
@@ -173,6 +172,8 @@ def fetch_cheapest_price(
     api_key: str,
     adults: int = 1,
     currency: str = "USD",
+    origin_entity_id: str = "",
+    destination_entity_id: str = "",
 ) -> dict:
     """
     Return {"price": int, "currency": currency} or {"price": None, "error": reason}.
@@ -181,8 +182,8 @@ def fetch_cheapest_price(
     if not api_key:
         return {"price": None, "error": "no_key"}
 
-    o = _airport_entity(origin, api_key)
-    d = _airport_entity(destination, api_key)
+    o = {"skyId": origin, "entityId": origin_entity_id} if origin_entity_id else _airport_entity(origin, api_key)
+    d = {"skyId": destination, "entityId": destination_entity_id} if destination_entity_id else _airport_entity(destination, api_key)
     if not o or not d:
         return {"price": None, "error": "airport_not_found"}
 
@@ -233,29 +234,6 @@ def search_airports(query: str, api_key: str) -> tuple[list[dict], str | None]:
     return search_airports_local(query), None
 
 
-def get_current_price(
-    origin: str,
-    destination: str,
-    date: str,
-    target: int,
-    cabin_class: str = "economy",
-    adults: int = 1,
-    currency: str = "USD",
-) -> int:
-    """
-    Live price from Skyscanner, or estimated from target ±10% if unavailable.
-    Returns a positive int in the requested currency (raw Skyscanner value).
-    """
-    result = fetch_cheapest_price(
-        origin, destination, date, cabin_class, _api_key(),
-        adults=adults, currency=currency,
-    )
-    if result.get("price"):
-        return result["price"]
-    rng = np.random.default_rng(abs(hash((origin, destination, date))) & 0xFFFFFFFF)
-    return int(target * rng.uniform(0.90, 1.10))
-
-
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_top_itineraries(
     origin: str,
@@ -266,6 +244,8 @@ def fetch_top_itineraries(
     api_key: str,
     limit: int = 5,
     currency: str = "USD",
+    origin_entity_id: str = "",
+    destination_entity_id: str = "",
 ) -> list[dict]:
     """
     Return the top `limit` cheapest itineraries for the route, each as:
@@ -275,8 +255,8 @@ def fetch_top_itineraries(
     if not api_key:
         return []
 
-    o = _airport_entity(origin, api_key)
-    d = _airport_entity(destination, api_key)
+    o = {"skyId": origin, "entityId": origin_entity_id} if origin_entity_id else _airport_entity(origin, api_key)
+    d = {"skyId": destination, "entityId": destination_entity_id} if destination_entity_id else _airport_entity(destination, api_key)
     if not o or not d:
         return []
 

@@ -19,6 +19,20 @@ def _history_points(watch):
 def render():
     watches = st.session_state.watches
     watch_id = st.session_state.selected_watch_id
+    if not watches:
+        col_back, col_title = st.columns([0.3, 3])
+        with col_back:
+            if st.button("←"):
+                st.session_state.page = "Dashboard"
+                st.rerun()
+        with col_title:
+            st.markdown('<h2 style="font-size:22px;font-weight:700;color:#111;margin:0;">Route Details</h2>', unsafe_allow_html=True)
+        st.info("No watches yet. Add a route to fetch a live Skyscanner price.")
+        if st.button("＋  Add New Watch", type="primary"):
+            st.session_state.page = "Add New Watch"
+            st.rerun()
+        return
+
     w = next((x for x in watches if x["id"] == watch_id), watches[0])
 
     currency = w.get("currency", "USD")
@@ -189,6 +203,8 @@ def render():
                 api_key=api_key,
                 limit=5,
                 currency=currency,
+                origin_entity_id=w.get("origin_entity_id", ""),
+                destination_entity_id=w.get("dest_entity_id", ""),
             )
         if not options:
             st.caption("No itineraries available right now.")

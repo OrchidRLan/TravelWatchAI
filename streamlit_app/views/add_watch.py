@@ -1,9 +1,9 @@
 import streamlit as st
 from datetime import date, timedelta
 from prediction_engine import predict_flight
-from skyscanner_api import fetch_cheapest_price, get_current_price, _api_key, search_airports
+from skyscanner_api import fetch_cheapest_price, _api_key, search_airports
 
-CURRENCIES = ["INR", "USD", "EUR", "GBP", "JPY", "AED", "SGD", "HKD"]
+CURRENCIES = ["USD", "INR", "EUR", "GBP", "JPY", "AED", "SGD", "HKD"]
 
 # Fallback list when no API key is configured
 _FALLBACK_CITIES = ["Bangalore", "Chennai", "Delhi", "Hyderabad", "Kolkata", "Mumbai"]
@@ -156,19 +156,27 @@ def render():
                         origin_id, dest_id, str(dep_date),
                         class_type.lower(), _api_key(),
                         adults=int(adults), currency=currency,
+                        origin_entity_id=origin_info.get("entityId", ""),
+                        destination_entity_id=dest_info.get("entityId", ""),
                     )
 
-                if api_result.get("price"):
-                    current_price = api_result["price"]
+                api_price = api_result.get("price")
+                api_currency = api_result.get("currency", currency)
+                err = api_result.get("error", "")
+                if api_price:
+                    current_price = api_price
+                    currency = api_currency
                     st.info(f"Live Skyscanner price: {currency} {current_price:,}")
+                elif err == "no_key":
+                    st.error("Skyscanner API key not configured. Add RAPIDAPI_KEY to create watches with live prices.")
+                    return
                 else:
-                    current_price = get_current_price(
-                        origin_id, dest_id, str(dep_date),
-                        target_price, class_type.lower(),
-                        adults=int(adults), currency=currency,
+                    current_price = target_price
+                    hint = "rate limited (429)" if "429" in str(err) else err
+                    st.warning(
+                        f"Live price unavailable ({hint}) — watch created using your target price as a placeholder. "
+                        "The price will update next time you refresh."
                     )
-                    if api_result.get("error") == "no_key":
-                        st.warning("Skyscanner API key not configured — using estimated price.")
 
                 flight_data = {
                     "origin": origin_id,
@@ -190,7 +198,9 @@ def render():
                 new_watch = {
                     "id": new_id,
                     "origin": origin_id,
+                    "origin_entity_id": origin_info.get("entityId", ""),
                     "dest": dest_id,
+                    "dest_entity_id": dest_info.get("entityId", ""),
                     "dep_date": str(dep_date),
                     "arr_date": str(arr_date),
                     "target": target_price,
@@ -216,11 +226,7 @@ def render():
                 st.session_state.watches.insert(0, new_watch)
                 st.session_state.selected_watch_id = new_id
 
-                st.success(
-                    f"Now watching {origin_id} → {dest_id}!\n"
-                    f"AI Recommendation: **{prediction['recommendation']}** ({prediction['confidence']}% confidence)"
-                )
-                st.session_state.page = "Dashboard"
+                st.session_state.page = "Task Detail"
                 st.rerun()
 
             except Exception as e:

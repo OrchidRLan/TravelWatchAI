@@ -1,7 +1,5 @@
 import streamlit as st
-from datetime import date, timedelta
-from prediction_engine import predict_flight
-from skyscanner_api import get_current_price, _api_key
+from skyscanner_api import _api_key
 
 st.set_page_config(
     page_title="TravelWatch AI",
@@ -118,83 +116,19 @@ div[data-testid="stRadio"] > div {
 # ── Session state ─────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def generate_initial_watches():
-    """Generate initial sample flights with AI predictions and live Skyscanner prices."""
-    try:
-        if not _api_key():
-            st.warning(
-                "Skyscanner prices unavailable — set RAPIDAPI_KEY in your environment "
-                "or .streamlit/secrets.toml to enable live pricing.",
-                icon="⚠️",
-            )
-
-        sample_flights = [
-            {"origin": "DEL", "destination": "BOM", "dep_date": "2026-05-20", "arr_date": "2026-05-20", "target": 5500, "currency": "INR"},
-            {"origin": "BLR", "destination": "DEL", "dep_date": "2026-05-25", "arr_date": "2026-05-25", "target": 6200, "currency": "INR"},
-            {"origin": "MAA", "destination": "CCU", "dep_date": "2026-06-01", "arr_date": "2026-06-01", "target": 5800, "currency": "INR"},
-        ]
-
-        watches = []
-        for i, flight in enumerate(sample_flights, 1):
-            current_price = get_current_price(
-                flight["origin"], flight["destination"],
-                flight["dep_date"], flight["target"],
-                cabin_class="economy",
-                adults=1,
-                currency=flight["currency"],
-            )
-
-            flight_data = {
-                'origin': flight["origin"],
-                'destination': flight["destination"],
-                'dep_date': flight["dep_date"],
-                'arr_date': flight["arr_date"],
-                'current_price': current_price,
-                'target': flight["target"],
-                'class': 'Economy',
-                'stops': 0,
-            }
-
-            prediction = predict_flight(flight_data)
-
-            watches.append({
-                "id": i,
-                "origin": flight["origin"],
-                "dest": flight["destination"],
-                "dep_date": flight["dep_date"],
-                "arr_date": flight["arr_date"],
-                "target": flight["target"],
-                "currency": flight["currency"],
-                "adults": 1,
-                "class": "Economy",
-                "stops": 0,
-                "current_price": current_price,
-                "recommendation": prediction["recommendation"],
-                "confidence": prediction["confidence"],
-                "change_pct": prediction["change_pct"],
-                "change_dir": prediction["change_dir"],
-                "predicted_price": prediction["predicted_price"],
-                "price_source": "live" if current_price else "estimated",
-                "price_history": [
-                    {"date": str(date.today()), "price": current_price, "source": "live"},
-                ],
-            })
-
-        return watches
-    except Exception as e:
-        # Fallback to simple defaults if prediction fails
-        st.warning(f"Could not generate predictions: {e}")
-        return [
-            {"id": 1, "origin": "Delhi", "dest": "Mumbai",
-             "dep_date": "2026-05-20", "arr_date": "2026-05-20",
-             "target": 5500, "currency": "INR", "current_price": 5200,
-             "recommendation": "BUY", "confidence": 85, "change_pct": 5.8, "change_dir": "down",
-             "predicted_price": 5200},
-        ]
+    """Start empty so every watch is based on a live Skyscanner lookup."""
+    if not _api_key():
+        st.warning(
+            "Skyscanner prices unavailable — set RAPIDAPI_KEY in your environment "
+            "or .streamlit/secrets.toml to enable live pricing.",
+            icon="⚠️",
+        )
+    return []
 
 if "watches" not in st.session_state:
     st.session_state.watches = generate_initial_watches()
 if "selected_watch_id" not in st.session_state:
-    st.session_state.selected_watch_id = 1
+    st.session_state.selected_watch_id = None
 if "currency" not in st.session_state:
     st.session_state.currency = "USD"
 if "price_alert" not in st.session_state:
